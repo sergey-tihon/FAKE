@@ -62,12 +62,38 @@ let executeFSIWithArgs workingDirectory script extraFsiArgs args =
     Thread.Sleep 1000
     result = 0
 
+open Microsoft.FSharp.Compiler.Interactive.Shell
+
+let fsiConfig = FsiEvaluationSession.GetDefaultConfiguration()
+let commonOptions = [| "fsi.exe"; "--noninteractive";|]
+let stdin = new StreamReader(System.IO.Stream.Null)
+ 
+let stdoutStream = new CompilerOutputStream()
+let stdout = StreamWriter.Synchronized(new StreamWriter(stdoutStream, AutoFlush=true))
+ 
+let stderrStream = new CompilerOutputStream()
+let stderr = StreamWriter.Synchronized(new StreamWriter(stderrStream, AutoFlush=true))
+    
+
+let session = FsiEvaluationSession(fsiConfig, commonOptions, stdin, stdout, stderr)
+
+
+
 /// Run the given buildscript with fsi.exe at the given working directory.
 let runBuildScriptAt workingDirectory printDetails script args =
     if printDetails then traceFAKE "Running Buildscript: %s" script
-    let result = ExecProcess (fsiStartInfo script workingDirectory args) System.TimeSpan.MaxValue
-    Thread.Sleep 1000
-    result = 0
+    let code = """"
+    
+let project = "DynamicsNAVProvider"
+printfn "Hello"
+"""
+
+    try 
+        session.EvalInteraction code
+    with e ->
+        printfn "Error evaluating expression (%s)" e.Message
+        
+    true
 
 /// Run the given buildscript with fsi.exe
 let runBuildScript printDetails script args =
